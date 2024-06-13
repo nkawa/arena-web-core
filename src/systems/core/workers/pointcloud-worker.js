@@ -5,7 +5,7 @@
  * @author Nobuo Kawaguchi
  */
 
-import { expose } from 'comlink';
+//import { expose } from 'comlink';
 import * as Paho from 'paho-mqtt'; // https://www.npmjs.com/package/paho-mqtt
 
 /**
@@ -19,16 +19,11 @@ class PointCloudWorker {
     connectionLostHandlers = [];
 
     /**
-     * @param {object} ARENAConfig
-     * @param {function} healthCheck
+     * @param {string} idTag
      */
-    constructor(ARENAConfig, healthCheck) {
+    constructor(idTag) {
         // this.restartJitsi = restartJitsi;
-        console.log("initialize of PCW!", ARENAConfig, healthCheck
-        )
-        this.config = ARENAConfig;
-        this.healthCheck = healthCheck;
-
+        //        console.log("initialize of PCW!")
         this.subscriptions = ["livox_slow"]// [this.config.renderTopic]; // Add main scene renderTopic by default to subs
         this.connectionLostHandlers = [
             (responseObject) => {
@@ -42,13 +37,13 @@ class PointCloudWorker {
             },
         ];
 
-        const mqttClient = new Paho.Client(ARENAConfig.mqttHostURI, `webClient-${ARENAConfig.idTag}`);
+        const mqttClient = new Paho.Client("wss://interop2024.uclab.jp:8999/", `webClient-${idTag}`);
         mqttClient.onConnected = async (reconnected, uri) => this.onConnected(reconnected, uri);
         mqttClient.onConnectionLost = async (response) => this.onConnectionLost(response);
         mqttClient.onMessageArrived = this.onMessageArrivedDispatcher.bind(this);
         this.mqttClient = mqttClient;
 
-        console.log("PointCloud MQTT Client", mqttClient)
+        //   console.log("PointCloud MQTT Client", mqttClient)
     }
 
     /**
@@ -61,9 +56,6 @@ class PointCloudWorker {
     connect(mqttClientOptions, onSuccessCallBack, lwMsg = undefined, lwTopic = undefined) {
         const opts = {
             onFailure(res) {
-                this.healthCheck({
-                    addError: 'mqttScene.connection',
-                });
                 console.error(`ARENA PointCloud connection failed, ${res.errorCode}, ${res.errorMessage}`);
             },
             ...mqttClientOptions,
@@ -124,26 +116,48 @@ class PointCloudWorker {
         // ここで MQTT メッセージを分解して、表示用に変換
         //        console.log(JSON.parse(message.payloadString))
         const msg = JSON.parse(message.payloadString)
+
         const binaryString = atob(msg.data); // base64 decode
 
+        //        console.log("Worker MsgLen", msg.data.length, binaryString.length)
+
         const rows = msg.width
+        //const rows = 10000
         const len = binaryString.length;
         const lsize = rows * 12
 
-        const bytes = new Uint8Array(lsize);
+        const buffer = new ArrayBuffer(lsize)
+        const bytes = new Uint8Array(buffer);
         for (let i = 0; i < rows; i++) {
             for (let j = 0; j < 12; j++) {
-                bytes[i * 12 + j] = binaryString.charCodeAt(i * 12 + j);
+                bytes[i * 12 + j] = binaryString.charCodeAt(i * 26 + j);
             }
         }
-        const float32Array = new Float32Array(bytes.buffer);
+
+
+        let dataView = new DataView(buffer);
+        const float32Array = new Float32Array(rows * 3);
+        for (let i = 0; i < rows; i++) {
+            float32Array[i * 3] = dataView.getFloat32(i * 12, true)
+            float32Array[i * 3 + 1] = dataView.getFloat32(i * 12 + 8, true) + 1.5
+            float32Array[i * 3 + 2] = dataView.getFloat32(i * 12 + 4, true) - 3
+        }
+
+        //        for (let i = 0; i < rows; i++) {
+        //            if (float32Array[i] > 10) float32Array[i] = 10;
+        //            if (float32Array[i] < -10) float32Array[i] = -10;
+        //        }
+
+        //                dataView.getFloat32(0, false)
+
+        //const float32Array = new Float32Array(bytes.buffer);
 
         //        console.log("Float", float32Array.length)
-        console.log("x,y,z", float32Array[0], float32Array[1], float32Array[2])
-        console.log("x,y,z", float32Array[3], float32Array[4], float32Array[5])
-        console.log("x,y,z", float32Array[6], float32Array[7], float32Array[8])
+        //        console.log("x,y,z", float32Array[0], float32Array[1], float32Array[2])
+        //        console.log("x,y,z", float32Array[3], float32Array[4], float32Array[5])
+        //        console.log("x,y,z", float32Array[6], float32Array[7], float32Array[8])
 
-        console.log(rows, binaryString.length, float32Array.length)
+        //        console.log(rows, binaryString.length, float32Array.length)
 
         const handler = this.messageHandlers[topicCategory];
         //        console.log("sending", float32Array.length, handler)
@@ -204,20 +218,17 @@ class PointCloudWorker {
      * @param {Object} uri uri used
      */
     async onConnected(reconnect, uri) {
-        await this.healthCheck({
-            removeError: 'mqttScene.connection',
-        });
 
-        console.log("Connect Pointcloud MQTT: Subscirbe", this.subscriptions)
+        //        console.log("Connect Pointcloud MQTT: Subscirbe", this.subscriptions)
         this.subscriptions.forEach((topic) => {
             this.mqttClient.subscribe(topic);
         });
 
         if (reconnect) {
             console.warn(`ARENA MQTT pointcloud reconnected to ${uri}`);
-        } else {
-            console.info(`ARENA MQTT pointcloud connected to ${uri}`);
-        }
+        } //else {
+        //            console.info(`ARENA MQTT pointcloud connected to ${uri}`);
+        //        }
     }
 
     /**
@@ -225,11 +236,40 @@ class PointCloudWorker {
      * @param {Object} responseObject paho response object
      */
     async onConnectionLost(responseObject) {
-        await this.healthCheck({
-            addError: 'mqttPointcloud.connection',
-        });
         this.connectionLostHandlers.forEach((handler) => handler(responseObject));
     }
 }
 
-expose(PointCloudWorker);
+// 今後はメッセージ型でやる
+var pcw = null;
+
+
+onmessage = (e) => {
+    switch (e.data[0]) {
+        case 'start':
+            var pcw = new PointCloudWorker(e.data[1])
+            pcw.registerMessageHandler('p',
+                (mes) => {
+                    postMessage(mes)
+                }, false)
+
+
+            pcw.connect(
+                {
+                    reconnect: true,
+                    userName: "anon",
+                    password: "",
+                },
+                () => {
+                    //                    console.log("PointCloud MQTT Connected!")
+                }
+            )
+            break;
+
+
+    }
+}
+
+
+
+//expose(PointCloudWorker);

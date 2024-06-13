@@ -26,6 +26,7 @@ AFRAME.registerSystem('arena-mqtt', {
         ARENA.events.addEventListener(ARENA_EVENTS.USER_PARAMS_LOADED, this.ready.bind(this));
     },
     async ready() {
+        //        console.log("MQTT-worker ready!");//, this.schema, this.el)
         const { data } = this;
         const { el } = this;
 
@@ -40,6 +41,7 @@ AFRAME.registerSystem('arena-mqtt', {
         this.mqttHostURI = `wss://${this.mqttHost}${data.mqttPath[Math.floor(Math.random() * data.mqttPath.length)]}`;
 
         this.MQTTWorker = await this.initWorker();
+        //        console.log("MQTT Worker assigned!", this.MQTTWorker)
 
         const mqttToken = this.arena.mqttToken.mqtt_token;
         const { camName } = this.arena;
@@ -53,7 +55,7 @@ AFRAME.registerSystem('arena-mqtt', {
                 password: mqttToken,
             },
             proxy(() => {
-                console.info('ARENA MQTT scene connection success!');
+                //                console.info('ARENA MQTT scene connection success!');
                 ARENA.events.emit(ARENA_EVENTS.MQTT_LOADED, true);
             }),
             // last will message
@@ -74,7 +76,8 @@ AFRAME.registerSystem('arena-mqtt', {
                 mqttHostURI: this.mqttHostURI,
                 idTag,
             },
-            proxy(this.mqttHealthCheck.bind(this))
+            proxy(() => { })//console.log("HealthCheck MQTT Worker") })
+            //            proxy(this.mqttHealthCheck.bind(this))
             // proxy(() => {
             //     if (ARENA.jitsi && !ARENA.jitsi.initialized) {
             //         // eslint-disable-next-line new-cap
@@ -170,7 +173,7 @@ AFRAME.registerSystem('arena-mqtt', {
         }
 
         switch (
-            theMessage.action // clientEvent, create, delete, update
+        theMessage.action // clientEvent, create, delete, update
         ) {
             case ACTIONS.CLIENT_EVENT:
                 if (theMessage.data === undefined) {
