@@ -249,6 +249,7 @@ AFRAME.registerSystem('arena-pointcloud', {
         const geometry = new AFRAME.THREE.BufferGeometry();
         geometry.setAttribute('position', new AFRAME.THREE.Float32BufferAttribute(pcd, 3));
         const material = new AFRAME.THREE.PointsMaterial({ size: 0.02 })
+        geometry.rotateY(-0.4)
         geometry.computeBoundingBox();
 
         el.points = new AFRAME.THREE.Points(geometry, material);

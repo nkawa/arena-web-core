@@ -138,8 +138,8 @@ class PointCloudWorker {
         let dataView = new DataView(buffer);
         const float32Array = new Float32Array(rows * 3);
         for (let i = 0; i < rows; i++) {
-            float32Array[i * 3] = dataView.getFloat32(i * 12, true)
-            float32Array[i * 3 + 1] = dataView.getFloat32(i * 12 + 8, true) + 1.5
+            float32Array[i * 3] = dataView.getFloat32(i * 12, true) + 0.45
+            float32Array[i * 3 + 1] = dataView.getFloat32(i * 12 + 8, true) + 1.1
             float32Array[i * 3 + 2] = dataView.getFloat32(i * 12 + 4, true) - 3
         }
 
