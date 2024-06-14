@@ -23,15 +23,19 @@ AFRAME.registerSystem('arena-scene', {
     },
 
     init() {
+        console.log("INit arena scene system")
         this.utils = ARENAUtils;
 
         window.addEventListener(ARENA_EVENTS.ON_AUTH, this.ready.bind(this));
-        ARENA.events.addEventListener(ARENA_EVENTS.USER_PARAMS_LOADED, this.fetchSceneOptions.bind(this));
-        ARENA.events.addEventListener(ARENA_EVENTS.USER_PARAMS_LOADED, () => {
-            this.fetchSceneObjects().then(() => {});
-        });
+        // fetch Options 無視！
+        //        ARENA.events.addEventListener(ARENA_EVENTS.USER_PARAMS_LOADED, this.fetchSceneOptions.bind(this));
+
+        // scene Object 無視！
+        //        ARENA.events.addEventListener(ARENA_EVENTS.USER_PARAMS_LOADED, () => {
+        //            this.fetchSceneObjects().then(() => { });
+        //        });
         ARENA.events.addEventListener(ARENA_EVENTS.MQTT_LOADED, () => {
-            this.initRuntimeMngr().then(() => {});
+            this.initRuntimeMngr().then(() => { });
 
             // replace console with our logging
             if (!ARENA.defaults.devInstance || ARENA.params.debug) {
@@ -48,12 +52,14 @@ AFRAME.registerSystem('arena-scene', {
     },
 
     ready(evt) {
+        console.log("arena Ready event!", evt)
         const { el } = this;
 
         const { sceneEl } = el;
 
         // Sync params with bootstrap ARENA object from Auth
         this.params = { ...ARENA.params };
+        console.log("Arena Params", this.params)
         this.defaults = ARENA.defaults;
 
         this.userName = ARENA.userName;
@@ -74,6 +80,8 @@ AFRAME.registerSystem('arena-scene', {
 
         window.ARENA = this; // alias to window for easy access
 
+        console.log("ARENA:", window.ARENA)
+
         // query string start coords given as a comma-separated string, e.g.: 'startCoords=0,1.6,0'
         if (typeof this.params.startCoords === 'string') {
             this.startCoords = this.params.startCoords.split(',').map((i) => Number(i));
@@ -88,6 +96,7 @@ AFRAME.registerSystem('arena-scene', {
         this.videoDistanceConstraints = true;
 
         this.mqttToken = evt.detail;
+        //        console.log("MQTT Token", this.mqttToken)
 
         // id tag including name is set from authentication service
         this.setIdTag(this.mqttToken.ids.userid);
@@ -223,6 +232,7 @@ AFRAME.registerSystem('arena-scene', {
      * Load Scene; checks URI parameters
      */
     loadScene() {
+        console.log("Load Scene! arena")
         const { el } = this;
 
         const { sceneEl } = el;
@@ -304,7 +314,8 @@ AFRAME.registerSystem('arena-scene', {
      */
     isUsersPermitted() {
         if (this.isBuild3dEnabled()) return false; // build3d is used on a new page
-        return ARENAUtils.matchJWT(`${this.params.realm}/c/${this.nameSpace}/o/#`, this.mqttToken.token_payload.subs);
+        return true // always OK
+        //        return ARENAUtils.matchJWT(`${this.params.realm}/c/${this.nameSpace}/o/#`, this.mqttToken.token_payload.subs);
     },
 
     /**
@@ -353,6 +364,7 @@ AFRAME.registerSystem('arena-scene', {
         const cameraEl = sceneEl.camera.el;
         cameraEl.setAttribute('arena-camera', 'enabled', this.isUsersPermitted());
         cameraEl.setAttribute('arena-camera', 'displayName', this.getDisplayName());
+        console.log("loadUser", cameraEl)
 
         const cameraRigObj3D = document.getElementById('cameraRig').object3D;
 
@@ -427,6 +439,8 @@ AFRAME.registerSystem('arena-scene', {
      * Expects that permissions have been checked so users won't be confused if publish fails.
      */
     loadArenaInspector() {
+        console.log("LoadArena Inspector!")
+
         const { sceneEl } = this.el;
 
         let el;
