@@ -48,6 +48,7 @@ window.ARENAAUTH = {
         };
     },
     authCheck() {
+        console.log("AuthCheck")
         this.setArenaParams();
         ARENA.userName = ARENA.params.name ?? ARENA.defaults.userName;
         // For now, just an alias for legacy code.
@@ -102,6 +103,20 @@ window.ARENAAUTH = {
      * This is a blocking request
      */
     requestAuthState() {
+        /* Ignore Auth*/
+        localStorage.setItem('display_name', "anon");
+        this.requestMqttToken('anonymous', "anon", true).then();
+        this.authenticated = true;
+        this.user_type = "anonymous";
+        this.auth_type = "anonymous";
+        this.user_username = "anon";
+
+        console.log("requestAuthState")
+
+        return;
+
+        /* */
+
         // 'remember' uri for post-login, just before login redirect
         localStorage.setItem('request_uri', window.location.href);
 
@@ -196,6 +211,22 @@ window.ARENAAUTH = {
      * @param {boolean} completeOnload wait for page load before firing callback
      */
     async requestMqttToken(authType, mqttUsername, completeOnload = false) {
+        const currentUnixTimeSec = Math.floor(Date.now() / 1000);
+        console.log("RequestMQTT", currentUnixTimeSec)
+        setTimeout(() => {
+            this.completeAuth({
+                username: "anon",
+                token: "token",
+                token_payload: "payload",
+                ids: {
+                    userid: "anon"
+                }
+
+
+            });
+        }, 3000);
+        return
+
         const nonScenePaths = ['/scenes/', '/build/', '/programs/', '/network/', '/files/'];
         const authParams = {
             username: mqttUsername,
@@ -271,6 +302,8 @@ window.ARENAAUTH = {
         const authCompleteEvent = new CustomEvent('onauth', {
             detail: onAuthEvt,
         });
+        const currentUnixTimeSec = Math.floor(Date.now() / 1000);
+        console.log("Complete Auth", currentUnixTimeSec, authCompleteEvent)
         window.dispatchEvent(authCompleteEvent);
     },
     /**
