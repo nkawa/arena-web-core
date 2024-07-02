@@ -175,7 +175,7 @@ class PointCloudWorker {
         const binaryString = atob(msg.data); // base64 decode
         const len = binaryString.length;
         const lsize = rows * 16
-        console.log("PS:", len, rows, lsize);
+        //        console.log("PS:", len, rows, lsize);
         const buffer = new ArrayBuffer(lsize)
         const bytes = new Uint8Array(buffer);
         for (let i = 0; i < rows; i++) {

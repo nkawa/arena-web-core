@@ -225,7 +225,7 @@ AFRAME.registerSystem('arena-pointcloud', {
         const pcd = message;
         const pcd_point = pcd.slice(0, ll * 3)
         const pcd_color = pcd.slice(ll * 3, ll * 6)
-        console.log("Length:", message.length, ll, pcd_point.length, pcd_color.length);
+        //        console.log("Length:", message.length, ll, pcd_point.length, pcd_color.length);
         const el = document.getElementById('pcd');
         const geometry = new AFRAME.THREE.BufferGeometry();
         geometry.setAttribute('position', new AFRAME.THREE.Float32BufferAttribute(pcd_point, 3));
