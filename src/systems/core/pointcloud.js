@@ -127,7 +127,7 @@ AFRAME.registerComponent('pointcloud', {
 
 AFRAME.registerSystem('arena-pointcloud', {
     schema: {
-        mqttHost: { type: 'string', default: "interop2024.uclab.jp" },
+        mqttHost: { type: 'string', default: "rs.uclab.jp" },
     },
 
     init() {
@@ -145,7 +145,7 @@ AFRAME.registerSystem('arena-pointcloud', {
         this.health = sceneEl.systems['arena-health-ui'];
 
         // set up MQTT params for worker
-        this.mqttHostURI = `wss://interop2024.uclab.jp:8999/`;
+        this.mqttHostURI = `wss://rs.uclab.jp:8999/`;
 
         //       console.log("Await start!")
         this.PointCloudWorker = this.initWorker();
@@ -221,86 +221,106 @@ AFRAME.registerSystem('arena-pointcloud', {
      * @param {object} message
      */
     onPointCloudMessageArrived(message) {
-        const ll = message.length / 3
-        //        console.log("Length:", message.length, ll)
-
+        const ll = message.length / 6
         const pcd = message;
-
-        /*
-        let xmax, ymax, xmin, ymin, zmax, zmin;
-        xmax = ymax = zmax = -100;
-        xmin = ymin = zmin = 100;
-        
-        for (let i = 0; i < ll; i++) {
-            x = pcd[i * 3]
-            y = pcd[i * 3 + 1]
-            z = pcd[i * 3 + 2]
-            if (x > xmax) xmax = x;
-            if (y > ymax) ymax = y;
-            if (z > zmax) zmax = z;
-            if (x < xmin) xmin = x;
-            if (y < ymin) ymin = y;
-            if (z < zmin) zmin = z;
-        }
-        console.log("xyz", xmin, xmax, "y:", ymin, ymax, "z:", zmin, zmax)
-        */
-
+        const pcd_point = pcd.slice(0, ll * 3)
+        const pcd_color = pcd.slice(ll * 3, ll * 6)
+        console.log("Length:", message.length, ll, pcd_point.length, pcd_color.length);
         const el = document.getElementById('pcd');
         const geometry = new AFRAME.THREE.BufferGeometry();
-        geometry.setAttribute('position', new AFRAME.THREE.Float32BufferAttribute(pcd, 3));
-        const material = new AFRAME.THREE.PointsMaterial({ size: 0.02 })
+        geometry.setAttribute('position', new AFRAME.THREE.Float32BufferAttribute(pcd_point, 3));
+        geometry.setAttribute('color', new AFRAME.THREE.Float32BufferAttribute(pcd_color, 3));
+        const material = new AFRAME.THREE.PointsMaterial({ size: 0.02, vertexColors: true });
         geometry.rotateY(-0.4)
         geometry.computeBoundingBox();
-
         el.points = new AFRAME.THREE.Points(geometry, material);
         el.setObject3D('mesh', el.points);
+    }
 
-
-
-        //        let ll = pcd.length / 3;
-        /*
-                if (!entityEl.geometry)
-                    entityEl.geometry = new THREE.BufferGeometry();
-        
-                /*
-                        const vertices = new Float32Array([
-                            -1.0, 0, 1.0, // v0
-                            1.0, .0, 1.0, // v1
-                            1.0, 2.0, 1.0, // v2
-                
-                            1.0, 1.0, 1.0, // v3
-                            -1.0, 1.0, 1.0, // v4
-                            -1.0, 0, 1.0  // v5
-                        ]);
+    /*
+        onPointCloudMessageArrived(message) {
+            const ll = message.length / 3
+            //        console.log("Length:", message.length, ll)
+    
+            const pcd = message;
+    
+            /*
+            let xmax, ymax, xmin, ymin, zmax, zmin;
+            xmax = ymax = zmax = -100;
+            xmin = ymin = zmin = 100;
             
-                //        console.log("EntityEL", entityEl)
-                //        console.log("EntityGeo", entityEl.geometry)
-        
-                //        entityEl.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-                //      const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        
-        
-                //        var positions = []
-                //        for (let i = 0; i < pcd.length; i++) {
-                //            positions.push(pcd[i])
-                //        }
-                //        this.geometry.vertices.push(new THREE.Vector3(0, 0, 0));
-        
-                entityEl.geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-                //        const material = new PointsMaterial({ size: 0.03 })
-        
-        
-                entityEl.material = new THREE.PointsMaterial({
-                    color: 0x888888,
-                    size: 0.5,
-                    sizeAttenuation: false
-                });
-                entityEl.geometry.computeBoundingSphere();
-        
-                entityEl.points = new THREE.Points(entityEl.geometry, entityEl.material);
-                entityEl.setObject3D('mesh', entityEl.points);
-        */
-    },
+            for (let i = 0; i < ll; i++) {
+                x = pcd[i * 3]
+                y = pcd[i * 3 + 1]
+                z = pcd[i * 3 + 2]
+                if (x > xmax) xmax = x;
+                if (y > ymax) ymax = y;
+                if (z > zmax) zmax = z;
+                if (x < xmin) xmin = x;
+                if (y < ymin) ymin = y;
+                if (z < zmin) zmin = z;
+            }
+            console.log("xyz", xmin, xmax, "y:", ymin, ymax, "z:", zmin, zmax)
+            */
+    /*
+            const el = document.getElementById('pcd');
+            const geometry = new AFRAME.THREE.BufferGeometry();
+            geometry.setAttribute('position', new AFRAME.THREE.Float32BufferAttribute(pcd, 3));
+            const material = new AFRAME.THREE.PointsMaterial({ size: 0.02 })
+            geometry.rotateY(-0.4)
+            geometry.computeBoundingBox();
+    
+            el.points = new AFRAME.THREE.Points(geometry, material);
+            el.setObject3D('mesh', el.points);
+    
+    
+    
+            //        let ll = pcd.length / 3;
+            /*
+                    if (!entityEl.geometry)
+                        entityEl.geometry = new THREE.BufferGeometry();
+            
+                    /*
+                            const vertices = new Float32Array([
+                                -1.0, 0, 1.0, // v0
+                                1.0, .0, 1.0, // v1
+                                1.0, 2.0, 1.0, // v2
+                    
+                                1.0, 1.0, 1.0, // v3
+                                -1.0, 1.0, 1.0, // v4
+                                -1.0, 0, 1.0  // v5
+                            ]);
+                
+                    //        console.log("EntityEL", entityEl)
+                    //        console.log("EntityGeo", entityEl.geometry)
+            
+                    //        entityEl.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    //      const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            
+            
+                    //        var positions = []
+                    //        for (let i = 0; i < pcd.length; i++) {
+                    //            positions.push(pcd[i])
+                    //        }
+                    //        this.geometry.vertices.push(new THREE.Vector3(0, 0, 0));
+            
+                    entityEl.geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                    //        const material = new PointsMaterial({ size: 0.03 })
+            
+            
+                    entityEl.material = new THREE.PointsMaterial({
+                        color: 0x888888,
+                        size: 0.5,
+                        sizeAttenuation: false
+                    });
+                    entityEl.geometry.computeBoundingSphere();
+            
+                    entityEl.points = new THREE.Points(entityEl.geometry, entityEl.material);
+                    entityEl.setObject3D('mesh', entityEl.points);
+            
+}*/
+
+    ,
     //    tick() {
     //        console.log("Arena Tick!")
     //    }

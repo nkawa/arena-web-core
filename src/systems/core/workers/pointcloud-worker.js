@@ -24,7 +24,7 @@ class PointCloudWorker {
     constructor(idTag) {
         // this.restartJitsi = restartJitsi;
         //        console.log("initialize of PCW!")
-        this.subscriptions = ["livox_slow"]// [this.config.renderTopic]; // Add main scene renderTopic by default to subs
+        this.subscriptions = ["pointcloud"]// [this.config.renderTopic]; // Add main scene renderTopic by default to subs
         this.connectionLostHandlers = [
             (responseObject) => {
                 if (responseObject.errorCode !== 0) {
@@ -37,7 +37,7 @@ class PointCloudWorker {
             },
         ];
 
-        const mqttClient = new Paho.Client("wss://interop2024.uclab.jp:8999/", `webClient-${idTag}`);
+        const mqttClient = new Paho.Client("wss://rs.uclab.jp:8999/", `webClient-${idTag}`);
         mqttClient.onConnected = async (reconnected, uri) => this.onConnected(reconnected, uri);
         mqttClient.onConnectionLost = async (response) => this.onConnectionLost(response);
         mqttClient.onMessageArrived = this.onMessageArrivedDispatcher.bind(this);
@@ -108,59 +108,95 @@ class PointCloudWorker {
      * If no handler exists for a given topic category, the message is ignored.
      * @param {Paho.Message} message
      */
+    /* original
+        onMessageArrivedDispatcher(message) {
+            const topic = message.destinationName;
+            //        const topicCategory = topic.split('/')[1];
+            const topicCategory = 'p'; // always point!
+            // 
+            // ここで MQTT メッセージを分解して、表示用に変換
+            //        console.log(JSON.parse(message.payloadString))
+            const msg = JSON.parse(message.payloadString)
+    
+            const binaryString = atob(msg.data); // base64 decode
+    
+            //        console.log("Worker MsgLen", msg.data.length, binaryString.length)
+    
+            const rows = msg.width
+            //const rows = 10000
+            const len = binaryString.length;
+            const lsize = rows * 12
+    
+            const buffer = new ArrayBuffer(lsize)
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < 12; j++) {
+                    bytes[i * 12 + j] = binaryString.charCodeAt(i * 26 + j);
+                }
+            }
+    
+    
+            let dataView = new DataView(buffer);
+            const float32Array = new Float32Array(rows * 3);
+            for (let i = 0; i < rows; i++) {
+                float32Array[i * 3] = dataView.getFloat32(i * 12, true) + 0.45
+                float32Array[i * 3 + 1] = dataView.getFloat32(i * 12 + 8, true) + 1.1
+                float32Array[i * 3 + 2] = dataView.getFloat32(i * 12 + 4, true) - 3
+            }
+    
+            //        for (let i = 0; i < rows; i++) {
+            //            if (float32Array[i] > 10) float32Array[i] = 10;
+            //            if (float32Array[i] < -10) float32Array[i] = -10;
+            //        }
+    
+            //                dataView.getFloat32(0, false)
+    
+            //const float32Array = new Float32Array(bytes.buffer);
+    
+            //        console.log("Float", float32Array.length)
+            //        console.log("x,y,z", float32Array[0], float32Array[1], float32Array[2])
+            //        console.log("x,y,z", float32Array[3], float32Array[4], float32Array[5])
+            //        console.log("x,y,z", float32Array[6], float32Array[7], float32Array[8])
+    
+            //        console.log(rows, binaryString.length, float32Array.length)
+    
+            const handler = this.messageHandlers[topicCategory];
+            //        console.log("sending", float32Array.length, handler)
+            if (handler) {
+                handler(float32Array);
+            }
+        }
+    */
+
     onMessageArrivedDispatcher(message) {
-        const topic = message.destinationName;
-        //        const topicCategory = topic.split('/')[1];
-        const topicCategory = 'p'; // always point!
-        // 
-        // ここで MQTT メッセージを分解して、表示用に変換
-        //        console.log(JSON.parse(message.payloadString))
         const msg = JSON.parse(message.payloadString)
 
-        const binaryString = atob(msg.data); // base64 decode
-
-        //        console.log("Worker MsgLen", msg.data.length, binaryString.length)
-
         const rows = msg.width
-        //const rows = 10000
+        const binaryString = atob(msg.data); // base64 decode
         const len = binaryString.length;
-        const lsize = rows * 12
-
+        const lsize = rows * 16
+        console.log("PS:", len, rows, lsize);
         const buffer = new ArrayBuffer(lsize)
         const bytes = new Uint8Array(buffer);
         for (let i = 0; i < rows; i++) {
-            for (let j = 0; j < 12; j++) {
-                bytes[i * 12 + j] = binaryString.charCodeAt(i * 26 + j);
+            for (let j = 0; j < 16; j++) {
+                bytes[i * 16 + j] = binaryString.charCodeAt(i * 16 + j);
             }
         }
-
-
         let dataView = new DataView(buffer);
-        const float32Array = new Float32Array(rows * 3);
+        const float32Array = new Float32Array(rows * 3 * 2);
         for (let i = 0; i < rows; i++) {
-            float32Array[i * 3] = dataView.getFloat32(i * 12, true) + 0.45
-            float32Array[i * 3 + 1] = dataView.getFloat32(i * 12 + 8, true) + 1.1
-            float32Array[i * 3 + 2] = dataView.getFloat32(i * 12 + 4, true) - 3
+            // float32Array[0:rows*3] = [x0,y0,z0,...,xn,yn,zn]
+            float32Array[i * 3] = dataView.getFloat32(i * 16, true) + 0.45
+            float32Array[i * 3 + 1] = dataView.getFloat32(i * 16 + 8, true) + 1.1
+            float32Array[i * 3 + 2] = dataView.getFloat32(i * 16 + 4, true) - 3
+            // float32Array[rows*3 : rows*6] = [r0,g0,b0,...,rn,gn,bn]
+            let rgb = dataView.getUint32(i * 16 + 12);
+            float32Array[(rows + i) * 3] = ((rgb >> 8) & 0xff) / 255.0;  // r
+            float32Array[(rows + i) * 3 + 1] = ((rgb >> 16) & 0xff) / 255.0; // g
+            float32Array[(rows + i) * 3 + 2] = ((rgb >> 24) & 0xff) / 255.0;  // b
         }
-
-        //        for (let i = 0; i < rows; i++) {
-        //            if (float32Array[i] > 10) float32Array[i] = 10;
-        //            if (float32Array[i] < -10) float32Array[i] = -10;
-        //        }
-
-        //                dataView.getFloat32(0, false)
-
-        //const float32Array = new Float32Array(bytes.buffer);
-
-        //        console.log("Float", float32Array.length)
-        //        console.log("x,y,z", float32Array[0], float32Array[1], float32Array[2])
-        //        console.log("x,y,z", float32Array[3], float32Array[4], float32Array[5])
-        //        console.log("x,y,z", float32Array[6], float32Array[7], float32Array[8])
-
-        //        console.log(rows, binaryString.length, float32Array.length)
-
-        const handler = this.messageHandlers[topicCategory];
-        //        console.log("sending", float32Array.length, handler)
+        const handler = this.messageHandlers['p'];
         if (handler) {
             handler(float32Array);
         }
